@@ -76,6 +76,7 @@ $(eval $(call SetupJdkExecutable, BUILD_JPACKAGE_APPLAUNCHEREXE, \
     LIBS_macosx := $(LIBCXX) -framework Cocoa, \
     LIBS_windows := $(LIBCXX), \
     LIBS_linux := -ldl, \
+    LIBS_bsd := -lpthread, \
     MANIFEST := $(JAVA_MANIFEST), \
     MANIFEST_VERSION := $(VERSION_NUMBER_FOUR_POSITIONS) \
 ))
