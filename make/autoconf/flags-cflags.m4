@@ -587,14 +587,6 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
   # CXXFLAGS C++ language level for all of JDK, including Hotspot.
   if test "x$TOOLCHAIN_TYPE" = xgcc || test "x$TOOLCHAIN_TYPE" = xclang || test "x$TOOLCHAIN_TYPE" = xxlc; then
     LANGSTD_CXXFLAGS="-std=c++14"
-    if test "x$OPENJDK_TARGET_OS_ENV" = xbsd.netbsd; then
-      # Under strict -std=c++14 NetBSD's <math.h> keeps isnan and isfinite
-      # out of the global namespace, and globalDefinitions_gcc.hpp stops
-      # at "'isnan' was not declared in this scope".  The GNU dialect
-      # defines _NETBSD_SOURCE and makes them visible; it is what pkgsrc
-      # builds this tree with, rewriting -std=c++14 to -std=gnu++14.
-      LANGSTD_CXXFLAGS="-std=gnu++14"
-    fi
   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
     LANGSTD_CXXFLAGS="-std:c++14"
   else
