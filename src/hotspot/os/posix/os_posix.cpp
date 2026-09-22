@@ -278,7 +278,7 @@ bool os::dir_is_empty(const char* path) {
 
 static char* reserve_mmapped_memory(size_t bytes, char* requested_addr) {
   char * addr;
-  int flags = MAP_PRIVATE NOT_AIX( | MAP_NORESERVE ) | MAP_ANONYMOUS;
+  int flags = MAP_PRIVATE NOT_BSD( NOT_AIX( | MAP_NORESERVE ) ) | MAP_ANONYMOUS;
   if (requested_addr != NULL) {
     assert((uintptr_t)requested_addr % os::vm_page_size() == 0, "Requested address should be aligned to OS page size");
     flags |= MAP_FIXED;
@@ -659,7 +659,7 @@ static bool is_allocatable(size_t s) {
   // Use raw anonymous mmap here; no need to go through any
   // of our reservation layers. We will unmap right away.
   void* p = ::mmap(NULL, s, PROT_NONE,
-                   MAP_PRIVATE | MAP_NORESERVE | MAP_ANONYMOUS, -1, 0);
+                   MAP_PRIVATE NOT_BSD( | MAP_NORESERVE ) | MAP_ANONYMOUS, -1, 0);
   if (p == MAP_FAILED) {
     return false;
   } else {

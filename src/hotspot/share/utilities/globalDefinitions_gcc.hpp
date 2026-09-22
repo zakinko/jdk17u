@@ -51,7 +51,7 @@
 #include <wchar.h>
 
 #include <math.h>
-#ifdef __NetBSD__
+#if defined(__NetBSD__) || defined(__DragonFly__)
 #include <cmath>
 #endif
 #include <time.h>
@@ -125,11 +125,11 @@ typedef uint64_t julong;
 // checking for nanness
 #if defined(__APPLE__)
 inline int g_isnan(double f) { return isnan(f); }
-#elif defined(__NetBSD__)
-// NetBSD's libstdc++ <cmath> takes isnan and isfinite out of the global
-// namespace rather than leaving <math.h>'s macros beside its own overloads,
-// and something in the include graph has reached <cmath> by here.  Say which
-// ones are meant.
+#elif defined(__NetBSD__) || defined(__DragonFly__)
+// The libstdc++ <cmath> of NetBSD and DragonFly takes isnan and isfinite
+// out of the global namespace rather than leaving <math.h>'s macros beside
+// its own overloads, and something in the include graph has reached <cmath>
+// by here.  Say which ones are meant.
 inline int g_isnan(float  f) { return std::isnan(f); }
 inline int g_isnan(double f) { return std::isnan(f); }
 #elif defined(LINUX) || defined(_ALLBSD_SOURCE)
@@ -144,7 +144,7 @@ inline int g_isnan(double f) { return isnan(f); }
 
 // Checking for finiteness
 
-#ifdef __NetBSD__
+#if defined(__NetBSD__) || defined(__DragonFly__)
 inline int g_isfinite(jfloat  f)                 { return std::isfinite(f); }
 inline int g_isfinite(jdouble f)                 { return std::isfinite(f); }
 #else
@@ -160,7 +160,8 @@ inline int wcslen(const jchar* x) { return wcslen((const wchar_t*)x); }
 
 // Formatting.
 #ifdef _LP64
-# ifdef __APPLE__
+// OpenBSD spells int64_t as long long even on LP64, as Darwin does.
+# if defined(__APPLE__) || defined(__OpenBSD__)
 # define FORMAT64_MODIFIER "ll"
 # else
 # define FORMAT64_MODIFIER "l"
