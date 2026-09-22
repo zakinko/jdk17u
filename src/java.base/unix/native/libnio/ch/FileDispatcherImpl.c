@@ -355,7 +355,8 @@ Java_sun_nio_ch_FileDispatcherImpl_setDirect0(JNIEnv *env, jclass clazz,
 #if defined(O_DIRECT) || defined(F_NOCACHE) || defined(DIRECTIO_ON)
     jint fd = fdval(env, fdo);
     jint result;
-#ifdef MACOSX
+// No BSD has statvfs64: fsblkcnt_t is 64 bits there to begin with.
+#if defined(_ALLBSD_SOURCE)
     struct statvfs file_stat;
 #else
     struct statvfs64 file_stat;
@@ -386,7 +387,7 @@ Java_sun_nio_ch_FileDispatcherImpl_setDirect0(JNIEnv *env, jclass clazz,
         return result;
     }
 #endif
-#ifdef MACOSX
+#if defined(_ALLBSD_SOURCE)
     result = fstatvfs(fd, &file_stat);
 #else
     result = fstatvfs64(fd, &file_stat);
