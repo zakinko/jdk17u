@@ -40,6 +40,16 @@
 #include <wchar.h>
 
 #include <math.h>
+#ifdef __NetBSD__
+// NetBSD's libstdc++ <math.h> does not bring std::isnan and std::isfinite
+// back into the global namespace once <cmath> has been seen, and gtest's
+// headers see it first, so g_isnan and g_isfinite below stop compiling in
+// the gtest build with "'isnan' was not declared in this scope".  Name
+// them explicitly; on the other systems <math.h> already does this.
+#include <cmath>
+using std::isnan;
+using std::isfinite;
+#endif
 #include <time.h>
 #include <fcntl.h>
 #include <dlfcn.h>
