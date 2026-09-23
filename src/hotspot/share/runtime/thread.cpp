@@ -315,7 +315,7 @@ Thread::Thread() {
     assert(Thread::current_or_null() == NULL, "creating thread before barrier set");
   }
 
-  MACOS_AARCH64_ONLY(DEBUG_ONLY(_wx_init = false));
+  BSD_AARCH64_ONLY(DEBUG_ONLY(_wx_init = false));
 }
 
 void Thread::initialize_tlab() {
@@ -377,7 +377,7 @@ void Thread::call_run() {
 
   // Perform common initialization actions
 
-  MACOS_AARCH64_ONLY(this->init_wx());
+  BSD_AARCH64_ONLY(this->init_wx());
 
   register_thread_stack_with_NMT();
 
@@ -1852,7 +1852,7 @@ void JavaThread::check_special_condition_for_native_trans(JavaThread *thread) {
   assert(!thread->has_last_Java_frame() || thread->frame_anchor()->walkable(), "Unwalkable stack in native->Java transition");
 
   // Enable WXWrite: called directly from interpreter native wrapper.
-  MACOS_AARCH64_ONLY(ThreadWXEnable wx(WXWrite, thread));
+  BSD_AARCH64_ONLY(ThreadWXEnable wx(WXWrite, thread));
 
   SafepointMechanism::process_if_requested_with_exit_check(thread, false /* check asyncs */);
 
@@ -2733,7 +2733,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   // Initialize the os module
   os::init();
 
-  MACOS_AARCH64_ONLY(os::current_thread_enable_wx(WXWrite));
+  BSD_AARCH64_ONLY(os::current_thread_enable_wx(WXWrite));
 
   // Record VM creation timing statistics
   TraceVmCreationTime create_vm_timer;
@@ -2843,7 +2843,7 @@ jint Threads::create_vm(JavaVMInitArgs* args, bool* canTryAgain) {
   main_thread->record_stack_base_and_size();
   main_thread->register_thread_stack_with_NMT();
   main_thread->set_active_handles(JNIHandleBlock::allocate_block());
-  MACOS_AARCH64_ONLY(main_thread->init_wx());
+  BSD_AARCH64_ONLY(main_thread->init_wx());
 
   if (!main_thread->set_as_starting_thread()) {
     vm_shutdown_during_initialization(
