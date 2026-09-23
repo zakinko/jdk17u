@@ -158,6 +158,7 @@ $(eval $(call SetupJdkLibrary, BUILD_LIBJVM, \
     DISABLED_WARNINGS_gcc_assembler_aarch64.cpp := misleading-indentation, \
     DISABLED_WARNINGS_gcc_c1_LIR.cpp := misleading-indentation, \
     DISABLED_WARNINGS_gcc_cgroupV1Subsystem_linux.cpp := address, \
+    DISABLED_WARNINGS_gcc_os_perf_bsd.cpp := stringop-truncation, \
     DISABLED_WARNINGS_gcc_cgroupV2Subsystem_linux.cpp := address, \
     DISABLED_WARNINGS_gcc_dict.cpp := char-subscripts, \
     DISABLED_WARNINGS_gcc_interp_masm_x86.cpp := uninitialized, \
