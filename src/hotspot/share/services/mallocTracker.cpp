@@ -137,7 +137,11 @@ void MallocHeader::check_block_integrity() const {
   // we test the smallest alignment we know.
   // Should we ever start using std::max_align_t, this would be one place to
   // fix up.
-  if (!is_aligned(this, sizeof(uint64_t))) {
+  // Compare on the integer: the compiler is entitled to assume that `this`
+  // is aligned for its own type, and clang folds the test away, so the
+  // block the gtest hands in unaligned reaches the canary check instead.
+  // 21 and later ask this of a uintptr_t for the same reason.
+  if (!is_aligned(p2i(this), sizeof(uint64_t))) {
     print_block_on_error(tty, (address)this);
     fatal(PREFIX "Block at " PTR_FORMAT ": block address is unaligned", p2i(this));
   }
