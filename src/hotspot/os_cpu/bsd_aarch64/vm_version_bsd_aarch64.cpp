@@ -157,11 +157,11 @@ bool VM_Version::is_cpu_emulated() {
 // of using the minimum (128 bits/16 bytes) in the following two functions.
 
 int VM_Version::get_current_sve_vector_length() {
-  return FloatRegister::sve_vl_min;
+  return FloatRegisterImpl::sve_vl_min;
 }
 
 int VM_Version::set_and_get_current_sve_vector_length(int length) {
-  return FloatRegister::sve_vl_min;
+  return FloatRegisterImpl::sve_vl_min;
 }
 
 #ifdef __OpenBSD__
