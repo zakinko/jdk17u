@@ -116,7 +116,7 @@ JavaThread* ProgrammableUpcallHandler::on_entry(OptimizedEntryBlob::FrameData* c
     thread->clear_pending_exception();
   }
 
-  BSD_AARCH64_ONLY(thread->enable_wx(WXExec));
+  MACOS_AARCH64_ONLY(thread->enable_wx(WXExec));
 
   return thread;
 }
@@ -126,7 +126,7 @@ void ProgrammableUpcallHandler::on_exit(OptimizedEntryBlob::FrameData* context) 
   JavaThread* thread = context->thread;
   assert(thread == JavaThread::current(), "must still be the same thread");
 
-  BSD_AARCH64_ONLY(thread->enable_wx(WXWrite));
+  MACOS_AARCH64_ONLY(thread->enable_wx(WXWrite));
 
   // restore previous handle block
   thread->set_active_handles(context->old_handles);
