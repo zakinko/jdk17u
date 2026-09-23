@@ -122,6 +122,8 @@ public:
     decl(SHA2,          "sha256",        6)   \
     decl(CRC32,         "crc",           7)   \
     decl(LSE,           "lse",           8)   \
+    decl(FPHP,          "fphp",          9)   \
+    decl(ASIMDHP,       "asimdhp",       10)  \
     decl(DCPOP,         "dcpop",         16)  \
     decl(SHA3,          "sha3",          17)  \
     decl(SHA512,        "sha512",        21)  \
