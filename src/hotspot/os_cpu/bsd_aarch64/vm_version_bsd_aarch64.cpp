@@ -508,8 +508,6 @@ void VM_Version::get_os_cpu_info() {
   static_assert(CPU_SHA512  == HWCAP_SHA512,  "Flag CPU_SHA512 must follow HWCAP");
   static_assert(CPU_SVE     == HWCAP_SVE,     "Flag CPU_SVE must follow HWCAP");
   // 17 does not model pointer authentication, so there is no CPU_PACA.
-  static_assert(CPU_FPHP    == HWCAP_FPHP,    "Flag CPU_FPHP must follow HWCAP");
-  static_assert(CPU_ASIMDHP == HWCAP_ASIMDHP, "Flag CPU_ASIMDHP must follow HWCAP");
   _features = auxv & (
       HWCAP_FP      |
       HWCAP_ASIMD   |
@@ -523,9 +521,7 @@ void VM_Version::get_os_cpu_info() {
       HWCAP_DCPOP   |
       HWCAP_SHA3    |
       HWCAP_SHA512  |
-      HWCAP_SVE     |
-      HWCAP_FPHP    |
-      HWCAP_ASIMDHP);
+      HWCAP_SVE);
 
   // Only allow SVE2 features if SVE is also available.  17 has no
   // CPU_SVEBITPERM.
