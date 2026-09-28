@@ -98,6 +98,40 @@ case "$os" in
       echo "$0: no GNU ld for $gnu; install binutils-$gnu" >&2
       exit 1
     fi
+    # clang asks for NetBSD's own emulation on 32-bit arm, and Debian's ld
+    # was built with only the Linux ones, so it stops at
+    #   unrecognised emulation mode: armelf_nbsd_eabihf
+    # before reading an object.  The two differ in the default linker
+    # script, and clang names the dynamic linker, the crt files and the
+    # libraries itself, so the Linux emulation links the same thing.  The
+    # other machines are asked for generic emulations that Debian has.
+    # A long link line -- libjvm's -- reaches ld as a response file, so
+    # the name is rewritten inside those too.
+    if [ "$gnu" = arm-linux-gnueabihf ]; then
+      cat > "$bindir/$triple-ld" <<W
+#!/bin/sh
+tmp=\$(mktemp -d)
+trap 'rm -rf "\$tmp"' EXIT
+n=0
+for a; do
+  shift
+  case "\$a" in
+    armelf_nbsd_eabihf) a=armelf_linux_eabi ;;
+    @*)
+      if [ -f "\${a#@}" ]; then
+        n=\$((n + 1))
+        sed 's/armelf_nbsd_eabihf/armelf_linux_eabi/g' "\${a#@}" > "\$tmp/\$n"
+        a="@\$tmp/\$n"
+      fi
+      ;;
+  esac
+  set -- "\$@" "\$a"
+done
+$ld_path "\$@"
+W
+      chmod +x "$bindir/$triple-ld"
+      ld_path="$bindir/$triple-ld"
+    fi
     # The Zero targets call through libffi, which NetBSD ships in pkgsrc,
     # so it lands under usr/pkg rather than usr/lib.  Anything that links
     # against libjvm has to be able to find it a second time -- the gtest
@@ -128,6 +162,19 @@ case "$os" in
     # package, and whatever links against libjvm has to find it again.
     common_extra="-isystem $sysroot/usr/local/include -L$sysroot/usr/local/lib \
         -Wl,-rpath-link=$sysroot/usr/local/lib"
+    # lld cannot leave an R_SPARC_64 for the run-time linker to resolve, so
+    # every vtable in libjvm stops the link with "relocation R_SPARC_64
+    # cannot be used against symbol ...; recompile with -fPIC".  OpenBSD's
+    # own sparc64 toolchain links with GNU ld, which emits them; do the same.
+    case "$triple" in
+      sparc64-*)
+        ld_path=$(command -v sparc64-linux-gnu-ld.bfd || true)
+        if [ -z "$ld_path" ]; then
+          echo "$0: no GNU ld for sparc64; install binutils-sparc64-linux-gnu" >&2
+          exit 1
+        fi
+        ;;
+    esac
     ;;
   *)
     cxx_extra=""
@@ -165,6 +212,29 @@ for tool in ar ranlib strip objcopy nm objdump; do
   printf '#!/bin/sh\nexec /usr/bin/llvm-%s%s "$@"\n' "$tool" "$llvm_suffix" > "$bindir/$triple-$tool"
   chmod +x "$bindir/$triple-$tool"
 done
+
+# NetBSD unwinds with DWARF CFI on 32-bit arm, not the ARM EHABI, and its
+# libraries carry no __cxa_end_cleanup: a sysroot search found it in none
+# of libstdc++, libsupc++, libgcc, libgcc_eh, libgcc_s or libc.  LLVM
+# nevertheless ended every C++ cleanup with a call to it on any *eabi*
+# triple, NetBSD's included, until Triple::isTargetEHABICompatible learnt
+# to leave NetBSD out -- and an executable with such a call does not link:
+#   undefined reference to `__cxa_end_cleanup'
+# while a shared library links and fails when it is loaded.  Compile one
+# cleanup here and stop now if this clang still does it, rather than at the
+# first C++ executable forty minutes into the build.
+case "$triple" in
+  armv7-*netbsd*)
+    printf 'struct S { ~S(); };\nvoid g();\nvoid f() { S s; g(); }\n' > "$bindir/eh-probe.cpp"
+    if "$bindir/$triple-clang++" -O2 -S -o - "$bindir/eh-probe.cpp" |
+        grep -q __cxa_end_cleanup; then
+      echo "$0: this clang ends C++ cleanups with __cxa_end_cleanup on" >&2
+      echo "$0: $triple, which NetBSD does not provide; use a newer LLVM" >&2
+      exit 1
+    fi
+    rm -f "$bindir/eh-probe.cpp"
+    ;;
+esac
 
 # Prove the wrapper links before configure spends ten minutes finding out.
 tmp=$(mktemp -d)
