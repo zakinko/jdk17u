@@ -62,6 +62,43 @@ extract() {
   sudo tar xf "$1" -C "$sysroot" "${@:2}"
 }
 
+# Installs a package from a pkg(8) repository -- FreeBSD's, or DragonFly's,
+# which is the same format -- into usr/local of the sysroot.  The repository
+# serves no directory listing, so the file name comes from its catalogue,
+# one JSON object per package.  A package is a tar whose
+# paths are absolute, next to the +MANIFEST and +COMPACT_MANIFEST.
+freebsd_pkg() {
+  repo="$1"
+  name="$2"
+  # Newer repositories carry the same catalogue as a JSON array in
+  # data.pkg, and some carry only that.
+  if [ ! -f catalogue.jsonl ]; then
+    if fetch packagesite.pkg "$repo/packagesite.pkg" &&
+        bsdtar -xf packagesite.pkg packagesite.yaml; then
+      mv packagesite.yaml catalogue.jsonl
+    else
+      fetch data.pkg "$repo/data.pkg"
+      bsdtar -xf data.pkg data
+      jq -c '.packages[]' data > catalogue.jsonl
+    fi
+  fi
+  path=$(jq -r "select(.name == \"$name\") | (.repopath // .path)" catalogue.jsonl | head -1)
+  if [ -z "$path" ]; then
+    echo "no $name in $repo" >&2
+    exit 1
+  fi
+  fetch "$name.pkg" "$repo/$path"
+  rm -rf pkgx && mkdir pkgx
+  bsdtar -xf "$name.pkg" -C pkgx
+  sudo mkdir -p "$sysroot/usr/local"
+  for d in include lib; do
+    [ -d "pkgx/usr/local/$d" ] || continue
+    echo "installing $name's $d into usr/local"
+    sudo cp -R "pkgx/usr/local/$d" "$sysroot/usr/local/"
+  done
+  rm -rf pkgx
+}
+
 case "$os" in
   netbsd)
     # comp holds the headers and the static libraries; xbase and xcomp the
@@ -142,6 +179,30 @@ case "$os" in
     base=https://download.freebsd.org/releases/$relpath/15.1-RELEASE
     fetch base.txz "$base/base.txz"
     extract base.txz
+    # 17 has no os_cpu/bsd_ppc, so 64-bit PowerPC is built as Zero, which
+    # calls through libffi.  FreeBSD has it as a package, not in base.
+    case "$arch" in powerpc64|powerpc64le)
+      abi=FreeBSD:15:$arch
+      # Not every machine has a quarterly branch: on 2026-09-27 both
+      # FreeBSD:15:powerpc64 and powerpc64le answered 404 for it, so take
+      # latest where quarterly is missing.
+      repo=
+      for branch in quarterly latest; do
+        for f in packagesite.pkg data.pkg; do
+          if curl -fsSIL --retry 2 --max-time 60 \
+              "https://pkg.freebsd.org/$abi/$branch/$f" > /dev/null 2>&1; then
+            repo=https://pkg.freebsd.org/$abi/$branch
+            break 2
+          fi
+        done
+      done
+      if [ -z "$repo" ]; then
+        echo "pkg.freebsd.org has no $abi repository, quarterly or latest" >&2
+        exit 1
+      fi
+      freebsd_pkg "$repo" libffi
+      ;;
+    esac
     ;;
 
   openbsd)
@@ -175,7 +236,7 @@ case "$os" in
     echo "extracting libiconv.tgz into usr/local"
     sudo tar xf libiconv.tgz -C "$sysroot/usr/local"
     # The Zero machines call through libffi, which is a package here too.
-    case "$arch" in i386|sparc64|armv7|riscv64)
+    case "$arch" in i386|sparc64|armv7|riscv64|powerpc64)
       fetch libffi.tgz \
           https://cdn.openbsd.org/pub/OpenBSD/7.9/packages/$pkgdir/libffi-3.5.2p0.tgz
       echo "extracting libffi.tgz into usr/local"
