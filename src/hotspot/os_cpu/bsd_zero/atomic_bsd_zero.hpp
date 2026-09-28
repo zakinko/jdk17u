@@ -160,6 +160,24 @@ static inline int arm_lock_test_and_set(int newval, volatile int *ptr) {
 }
 #endif // ARM
 
+// The 8-byte operations below go through an 8-byte aligned view of their
+// operand.  The i386 ABI aligns a 64-bit integer to four bytes, so without
+// it clang cannot assume a naturally aligned operand and turns every one of
+// them into a call to __atomic_*_8 -- which nothing on the NetBSD link line
+// provides -- and warns that it did (-Watomic-alignment).  With it, clang
+// emits lock cmpxchg8b, which is atomic at any alignment, as gcc does
+// without being told.  Where the ABI already aligns them to eight, as on
+// 32-bit arm and on every 64-bit machine, this changes nothing.
+template<typename T>
+struct BsdZeroAligned8 {
+  typedef T type __attribute__((aligned(8)));
+};
+
+template<typename T>
+inline typename BsdZeroAligned8<T>::type volatile* bsd_zero_aligned8(T volatile* p) {
+  return reinterpret_cast<typename BsdZeroAligned8<T>::type volatile*>(p);
+}
+
 template<size_t byte_size>
 struct Atomic::PlatformAdd {
   template<typename D, typename I>
@@ -198,7 +216,7 @@ inline D Atomic::PlatformAdd<8>::add_and_fetch(D volatile* dest, I add_value,
   STATIC_ASSERT(8 == sizeof(I));
   STATIC_ASSERT(8 == sizeof(D));
 
-  D res = __atomic_add_fetch(dest, add_value, __ATOMIC_RELEASE);
+  D res = __atomic_add_fetch(bsd_zero_aligned8(dest), add_value, __ATOMIC_RELEASE);
   FULL_MEM_BARRIER;
   return res;
 }
@@ -237,7 +255,7 @@ inline T Atomic::PlatformXchg<8>::operator()(T volatile* dest,
                                              T exchange_value,
                                              atomic_memory_order order) const {
   STATIC_ASSERT(8 == sizeof(T));
-  T result = __sync_lock_test_and_set (dest, exchange_value);
+  T result = __sync_lock_test_and_set (bsd_zero_aligned8(dest), exchange_value);
   OrderAccess::fence();
   return result;
 }
@@ -279,7 +297,7 @@ inline T Atomic::PlatformCmpxchg<8>::operator()(T volatile* dest,
 
   T value = compare_value;
   FULL_MEM_BARRIER;
-  __atomic_compare_exchange(dest, &value, &exchange_value, /*weak*/false,
+  __atomic_compare_exchange(bsd_zero_aligned8(dest), &value, &exchange_value, /*weak*/false,
                             __ATOMIC_RELAXED, __ATOMIC_RELAXED);
   FULL_MEM_BARRIER;
   return value;
