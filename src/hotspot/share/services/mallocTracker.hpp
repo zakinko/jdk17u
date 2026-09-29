@@ -305,6 +305,8 @@ class MallocHeader {
   static const size_t max_reasonable_malloc_size = LP64_ONLY(256 * G) NOT_LP64(3500 * M);
 
   void print_block_on_error(outputStream* st, address bad_address) const;
+  // MallocTracker::record_free checks the block's alignment itself.
+  friend class MallocTracker;
 
   static uint16_t build_footer(uint8_t b1, uint8_t b2) { return ((uint16_t)b1 << 8) | (uint16_t)b2; }
 

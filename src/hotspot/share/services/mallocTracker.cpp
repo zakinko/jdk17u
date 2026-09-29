@@ -137,14 +137,11 @@ void MallocHeader::check_block_integrity() const {
   // we test the smallest alignment we know.
   // Should we ever start using std::max_align_t, this would be one place to
   // fix up.
-  // Compare on the integer: the compiler is entitled to assume that `this`
-  // is aligned for its own type, and clang folds the test away, so the
-  // block the gtest hands in unaligned reaches the canary check instead.
-  // 21 and later ask this of a uintptr_t for the same reason.
-  if (!is_aligned(p2i(this), sizeof(uint64_t))) {
-    print_block_on_error(tty, (address)this);
-    fatal(PREFIX "Block at " PTR_FORMAT ": block address is unaligned", p2i(this));
-  }
+  // The test is made in MallocTracker::record_free, on the payload address:
+  // here the compiler is entitled to assume that `this` is aligned for its
+  // own type, and clang folds the test away even on p2i(this), so a block
+  // freed unaligned reaches the canary check instead.  21 and later ask
+  // this of the payload as a uintptr_t for the same reason.
 
   // Check header canary
   if (_canary != _header_canary_life_mark) {
@@ -229,6 +226,12 @@ void* MallocTracker::record_free(void* memblock) {
   assert(memblock != NULL, "precondition");
 
   MallocHeader* const header = malloc_header(memblock);
+  // Asked of the payload while it is still a void*; see
+  // MallocHeader::check_block_integrity for why not of the header.
+  if (!is_aligned(p2i(memblock), sizeof(uint64_t))) {
+    header->print_block_on_error(tty, (address)header);
+    fatal("NMT corruption: Block at " PTR_FORMAT ": block address is unaligned", p2i(header));
+  }
   header->check_block_integrity();
 
   MallocMemorySummary::record_free(header->size(), header->flags());
