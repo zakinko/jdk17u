@@ -179,13 +179,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ALL: >-
             [
-            {"os":"netbsd",   "arch":"",       "platform":"bsd-x86_64-netbsd",   "release":"10.1", "runner":"ubuntu-24.04", "timeout-factor":"4"},
-            {"os":"freebsd",  "arch":"",       "platform":"bsd-x86_64-freebsd",  "release":"15.1", "runner":"ubuntu-24.04", "timeout-factor":"4"},
-            {"os":"openbsd",  "arch":"",       "platform":"bsd-x86_64-openbsd",  "release":"7.9",  "runner":"ubuntu-24.04", "timeout-factor":"4"},
-            {"os":"dragonfly","arch":"",       "platform":"bsd-x86_64-dragonfly","release":"6.4.2","runner":"ubuntu-24.04", "timeout-factor":"4"},
-            {"os":"netbsd",   "arch":"aarch64","platform":"bsd-aarch64-netbsd",  "release":"10.1", "runner":"ubuntu-24.04-arm", "timeout-factor":"12"},
-            {"os":"freebsd",  "arch":"aarch64","platform":"bsd-aarch64-freebsd", "release":"15.1", "runner":"ubuntu-24.04-arm", "timeout-factor":"12"},
-            {"os":"openbsd",  "arch":"aarch64","platform":"bsd-aarch64-openbsd", "release":"7.9",  "runner":"ubuntu-24.04-arm", "timeout-factor":"12"}]
+            {"os":"netbsd",   "arch":"",       "platform":"bsd-x86_64-netbsd",   "release":"10.1", "runner":"ubuntu-24.04", "timeout-factor":"4", "parts":""},
+            {"os":"freebsd",  "arch":"",       "platform":"bsd-x86_64-freebsd",  "release":"15.1", "runner":"ubuntu-24.04", "timeout-factor":"4", "parts":""},
+            {"os":"openbsd",  "arch":"",       "platform":"bsd-x86_64-openbsd",  "release":"7.9",  "runner":"ubuntu-24.04", "timeout-factor":"4", "parts":""},
+            {"os":"dragonfly","arch":"",       "platform":"bsd-x86_64-dragonfly","release":"6.4.2","runner":"ubuntu-24.04", "timeout-factor":"4", "parts":""},
+            {"os":"netbsd",   "arch":"aarch64","platform":"bsd-aarch64-netbsd",  "release":"10.1", "runner":"ubuntu-24.04-arm", "timeout-factor":"12", "parts":"hs-common hs-compiler1 hs-compiler2 hs-compiler3 hs-gc hs-runtime"},
+            {"os":"freebsd",  "arch":"aarch64","platform":"bsd-aarch64-freebsd", "release":"15.1", "runner":"ubuntu-24.04-arm", "timeout-factor":"12", "parts":"hs-common hs-compiler1 hs-compiler2 hs-compiler3 hs-gc hs-runtime"},
+            {"os":"openbsd",  "arch":"aarch64","platform":"bsd-aarch64-openbsd", "release":"7.9",  "runner":"ubuntu-24.04-arm", "timeout-factor":"12", "parts":"hs-common hs-compiler1 hs-compiler2 hs-compiler3 hs-gc hs-runtime"}]
         run: |
           gh api --paginate \
             "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts?per_page=100" \
@@ -202,7 +202,12 @@ jobs:
   # aarch64 ones go on an arm64 runner; that runner has no /dev/kvm either,
   # so they are emulated there too, only less so -- slowly enough that the
   # first NetBSD/aarch64 run on 28 lost ten tests to jtreg's timeout alone.
-  # They get three times jtreg's default factor of four.
+  # They get three times jtreg's default factor of four, and only the six
+  # HotSpot parts, which are what differs by CPU: the JIT, the collectors
+  # and the runtime.  21's aarch64 run 36011130579 took 36m to 4h46 for
+  # those, while jdk/tier1 parts 1 and 2 and langtools hit the six-hour
+  # limit; the library parts run on x86_64 anyway, and serviceability is
+  # skipped where the BSDs build no SA.  x86_64 runs all thirteen.
   #
   # Builds cancelled by a newer push leave nothing to test, and a tier1
   # started anyway would take the machine's tier1 group from the newer
@@ -226,3 +231,4 @@ jobs:
       runner: ${{ matrix.runner }}
       release: ${{ matrix.release }}
       timeout-factor: ${{ matrix.timeout-factor }}
+      parts: ${{ matrix.parts }}
