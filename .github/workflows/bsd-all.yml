@@ -24,11 +24,16 @@ on:
       - claude/eloquent-dirac-pfg00n
   workflow_dispatch:
 
-# No run-wide concurrency: a push would then cancel tier1, which takes
-# hours, every time a fix went in, and no run would ever finish one.  A
-# newer push cancels the builds of an older one, and each machine's tier1
-# is never cancelled once it starts; a newer one waits for it, and only the
-# newest waiting one runs.
+# One run per branch: a newer push cancels the whole of an older run,
+# tier1 included.  Without it an older run whose builds were cancelled
+# stayed in the queue for the rest of its jobs, and the Actions queue is
+# shared with the other releases' BSD runs -- on 2026-09-29 about four jobs
+# ran at a time across all of them and every BSD all sat queued for five
+# hours.  28's bsd-zero.yml has the same.  So push only between tier1 runs.
+concurrency:
+  group: bsd-all-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   hotspot:
     name: hotspot
