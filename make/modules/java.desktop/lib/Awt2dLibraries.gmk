@@ -257,7 +257,8 @@ ifeq ($(call isTargetOs, windows macosx), false)
             format-security int-to-pointer-cast parentheses \
             implicit-fallthrough undef unused-function, \
         DISABLED_WARNINGS_clang := parentheses format undef \
-            logical-op-parentheses format-nonliteral int-conversion, \
+            logical-op-parentheses format-nonliteral int-conversion \
+            pointer-to-int-cast deprecated-non-prototype, \
         LDFLAGS := $(LDFLAGS_JDKLIB) \
             $(call SET_SHARED_LIBRARY_ORIGIN) \
             -L$(INSTALL_LIBRARIES_HERE), \
