@@ -85,8 +85,12 @@ fi
 
 if [ "$os" = OpenBSD ]; then
   # The JVM reserves its heap and code cache up front, well past the
-  # default data size limit of a login class.
-  ulimit -Sd `ulimit -Hd`
+  # default data size limit of a login class.  Raising the soft limit to
+  # the hard one was not enough: jdk/tier1 part 2 still stopped at
+  #   os::commit_memory(0x00000006c0000000, 5368709120, 0) failed;
+  #   error='ENOMEM' (errno=12)
+  # The steps run as root, which may lift the hard limit too.
+  ulimit -d unlimited 2>/dev/null || ulimit -Sd `ulimit -Hd`
 fi
 
 # Print what a JVM that died left behind: the hs_err file says which frame
