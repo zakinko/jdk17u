@@ -37,12 +37,19 @@ ifeq ($(call isTargetOs, linux), true)
 
 else ifeq ($(call isTargetOs, windows), false)
 
+  # The library exists so that dlsym on it reaches libc and libm.  OpenBSD's
+  # driver links no libc into a shared object, so name them there, as Linux
+  # does; the other BSDs' drivers add libc themselves.
+  ifeq ($(OPENJDK_TARGET_OS_ENV), bsd.openbsd)
+    LIBSYSLOOKUP_LIBS := -lc -lm
+  endif
+
   $(eval $(call SetupJdkLibrary, BUILD_SYSLOOKUPLIB, \
       NAME := syslookup, \
       CFLAGS := $(CFLAGS_JDKLIB), \
       CXXFLAGS := $(CXXFLAGS_JDKLIB), \
       LDFLAGS := $(LDFLAGS_JDKLIB), \
-      LIBS := $(LIBCXX), \
+      LIBS := $(LIBCXX) $(LIBSYSLOOKUP_LIBS), \
   ))
 
 else # windows
