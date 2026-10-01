@@ -2114,6 +2114,34 @@ void os::naked_yield() {
   sched_yield();
 }
 
+#ifdef __OpenBSD__
+// OpenBSD's nanosleep(2) is accurate only down to about 20 ms, so a shorter
+// sleep is a spin with SpinPause instead.  The handshake code waits in
+// steps of 10 us, and each of those became a 20 ms sleep.
+void os::naked_short_nanosleep(jlong ns) {
+  assert(ns > -1 && ns < NANOUNITS, "Un-interruptable sleep, short time use only");
+
+  if (ns >= 20 * NANOUNITS_PER_MILLIUNIT) {
+    struct timespec req, rem;
+    req.tv_sec = 0;
+    req.tv_nsec = ns;
+    while (::nanosleep(&req, &rem) == -1) {
+      if (errno == EINTR) {
+        req = rem;
+      } else {
+        break;
+      }
+    }
+    return;
+  }
+
+  jlong start = os::javaTimeNanos();
+  do {
+    SpinPause();
+  } while (os::javaTimeNanos() - start < ns);
+}
+#endif // __OpenBSD__
+
 ////////////////////////////////////////////////////////////////////////////////
 // thread priority support
 
