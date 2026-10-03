@@ -291,11 +291,11 @@ pid_t os_getParentPidAndTimings(JNIEnv *env, pid_t jpid,
     }
 
 #if defined(__DragonFly__)
-    // DragonFly keeps the process's rusage in the same record, so unlike
-    // FreeBSD below it can answer for a process other than this one.
-    jlong microsecs =
-        (jlong)kp.kp_ru.ru_utime.tv_sec * 1000 * 1000 + kp.kp_ru.ru_utime.tv_usec +
-        (jlong)kp.kp_ru.ru_stime.tv_sec * 1000 * 1000 + kp.kp_ru.ru_stime.tv_usec;
+    // DragonFly sums the live threads' times into kp_lwp, in microseconds,
+    // so unlike FreeBSD below it can answer for a process other than this
+    // one.  kp_ru holds only what exited threads used; ps reads kp_lwp too.
+    jlong microsecs = (jlong)(kp.kp_lwp.kl_uticks + kp.kp_lwp.kl_sticks +
+                              kp.kp_lwp.kl_iticks);
     *totalTime = microsecs * 1000;
 #elif !defined(__FreeBSD__)
     jlong microsecs = kp.p_uutime_sec * 1000 * 1000 + kp.p_uutime_usec +
