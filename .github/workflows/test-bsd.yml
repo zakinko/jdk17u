@@ -165,6 +165,14 @@ jobs:
         if: inputs.target-os == 'netbsd'
 
       # jtreg's process tests read /proc, which FreeBSD does not mount.
+      #
+      # The emulated aarch64 guest's rsync receiver keeps losing its place
+      # in the stream before a test runs -- "Invalid block index 726066513
+      # (count=0) [receiver]", then "rsync error: protocol incompatibility
+      # (code 2) at receiver.c(573) [receiver=3.5.0]" -- in four of six
+      # parts of one run.  ssh would have caught bytes changed on the way,
+      # so it is the receiver, and a tar stream has no receiver state to
+      # lose.
       - name: 'Run tests in a FreeBSD virtual machine'
         uses: vmactions/freebsd-vm@v1
         with:
@@ -173,6 +181,7 @@ jobs:
           mem: 12288
           cpu: 4
           usesh: true
+          sync: ${{ inputs.arch == 'aarch64' && 'tar' || 'rsync' }}
           copyback: true
           envs: 'TEST_SUITE TIMEOUT_FACTOR'
           prepare: |
