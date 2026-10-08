@@ -146,13 +146,18 @@ gnu=""
 if command -v gsed >/dev/null 2>&1; then gnu="$gnu SED=`command -v gsed`"; fi
 if command -v ggrep >/dev/null 2>&1; then gnu="$gnu GREP=`command -v ggrep`"; fi
 
+# MAX_OUTPUT: jtreg keeps only the beginning and end of what a test prints,
+# 100000 characters in all by default, and drops the middle.  The test
+# runtime/NMT/CheckForProperDetailStackTrace prints every malloc site and
+# then fails on aarch64 for want of one stack -- which was always in the
+# part dropped.  Two megabytes keeps all of it.
 gmake run-test-prebuilt $gnu \
   TEST="$suite" \
   BOOT_JDK="$JDK" \
   JT_HOME="$JT" \
   JDK_IMAGE_DIR="$JDK" \
   TEST_IMAGE_DIR="$TESTS" \
-  JTREG="JAVA_OPTIONS=-XX:-CreateCoredumpOnCrash;VERBOSE=fail,error,time;KEYWORDS=!headful;TIMEOUT_FACTOR=${TIMEOUT_FACTOR:-4}"
+  JTREG="JAVA_OPTIONS=-XX:-CreateCoredumpOnCrash;VERBOSE=fail,error,time;KEYWORDS=!headful;TIMEOUT_FACTOR=${TIMEOUT_FACTOR:-4};MAX_OUTPUT=2000000"
 
 # make run-test-prebuilt prints "TEST FAILURE" and then returns 0: it reports
 # the failure as build/run-test-prebuilt/make-support/exit-with-error.
