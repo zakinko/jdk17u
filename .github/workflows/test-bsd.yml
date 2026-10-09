@@ -260,6 +260,18 @@ jobs:
       # Absent results are a failure too.  If the copy back quietly does not
       # happen, an empty workspace looks exactly like a clean run, which is
       # the shape of the bug this whole path exists to stop.
+      # runtime/NMT/CheckForProperDetailStackTrace fails on the aarch64 BSDs
+      # for want of one stack among thousands, and the .jtr that holds them
+      # is only in the artifact.  Print the module-definition sites here, so
+      # the job log says which stack the VM recorded instead.
+      - name: 'Show the NMT stacks CheckForProperDetailStackTrace looked for'
+        run: |
+          find build -name CheckForProperDetailStackTrace.jtr | while read f; do
+            echo "== $f"
+            grep -n -B6 -A2 'locked_create_entry\|ModuleEntryTable' "$f" | head -200
+          done
+        if: always()
+
       - name: 'Fail the job when a test failed'
         run: |
           R=build/run-test-prebuilt
