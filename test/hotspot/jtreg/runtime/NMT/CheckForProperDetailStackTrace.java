@@ -76,6 +76,16 @@ public class CheckForProperDetailStackTrace {
         ".*Modules.*define_module.*\n" +
         ".*JVM_DefineModule.*\n";
 
+    /* Alternate stacktrace that we check if both of the above fail, because
+       Hashtable::new_entry may itself be inlined into ModuleEntryTable::new_entry,
+       as clang does on aarch64.
+    */
+    private static String stackTraceInlinedHashtable =
+        ".*ModuleEntryTable.*new_entry.*\n" +
+        ".*ModuleEntryTable.*locked_create_entry.*\n" +
+        ".*Modules.*define_module.*\n" +
+        ".*JVM_DefineModule.*\n";
+
     /* The stack trace we look for on AIX and Windows slowdebug builds.
        ALWAYSINLINE is only a hint and is ignored for AllocateHeap on the
        aforementioned platforms. When that happens allocate_new_entry is
@@ -153,6 +163,11 @@ public class CheckForProperDetailStackTrace {
                 System.out.println("Looking for alternate stack matching:");
                 System.out.print(stackTraceAlternate);
                 if (stackTraceMatches(stackTraceAlternate, output)) {
+                    return;
+                }
+                System.out.println("Looking for stack with Hashtable::new_entry inlined:");
+                System.out.print(stackTraceInlinedHashtable);
+                if (stackTraceMatches(stackTraceInlinedHashtable, output)) {
                     return;
                 }
             } else {
